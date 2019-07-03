@@ -106,14 +106,14 @@ class AfterpayReturnModuleFrontController extends ModuleFrontController
             $message = "Afterpay Transaction Integrity Check Error: " . $log_message;
             PrestaShopLogger::addLog($message, 2, NULL, "Afterpay", 1);
         }
-        else if( $results["results"]->totalAmount->amount != round($this->context->cart->getOrderTotal(), 2) ) {
+        else if( $results["results"]->totalAmount->amount != number_format( round( $this->context->cart->getOrderTotal(), 2, PHP_ROUND_HALF_UP ), 2, '.', '' ) ) {
             $error["error"]     =   true;
             $error["message"]   =   "Afterpay Transaction Capture Failed - Incorrect Amount Detected";
 
 
             $log_message        =   "Afterpay Transaction Capture Failed - Incorrect Amount Detected;" . 
                                     " API: " . $results["results"]->totalAmount->amount .
-                                    " Session: " . round($this->context->cart->getOrderTotal(), 2);
+                                    " Session: " . number_format( round( $this->context->cart->getOrderTotal(), 2, PHP_ROUND_HALF_UP ), 2, '.', '' );
 
 
             $message = "Afterpay Transaction Integrity Check Error: " . $log_message;

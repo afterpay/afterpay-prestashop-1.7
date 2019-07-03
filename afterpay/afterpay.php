@@ -61,7 +61,7 @@ class Afterpay extends PaymentModule
     {
         $this->name = 'afterpay';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.0';
+        $this->version = '1.0.1';
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
         $this->author = 'Afterpay Touch Group';
         $this->controllers = array('validation', 'return');
@@ -194,9 +194,9 @@ class Afterpay extends PaymentModule
      */
     private function _getCurrentCartTotalDisplay() {
         $cart = $this->context->cart;
-        $order_total = round($cart->getOrderTotal(), 2);
+        $order_total = round($cart->getOrderTotal(), 2, PHP_ROUND_HALF_UP);
 
-        return $this->context->currency->iso_code . " " . $this->context->currency->sign . $order_total;
+        return $this->context->currency->iso_code . " " . $this->context->currency->sign . number_format($order_total, 2, '.', ',');
     }
     
     /**
@@ -213,7 +213,7 @@ class Afterpay extends PaymentModule
         }
         $instalment = round($amount / 4, 2, PHP_ROUND_HALF_UP);
 
-        return $this->context->currency->iso_code . " " . $this->context->currency->sign . $instalment;
+        return $this->context->currency->iso_code . " " . $this->context->currency->sign . number_format($instalment, 2, '.', ',');
     }
     
     /**
@@ -232,7 +232,7 @@ class Afterpay extends PaymentModule
         $prev_instalments = round($amount / 4, 2, PHP_ROUND_HALF_UP);
         $instalment = $amount - 3 * $prev_instalments;
 
-        return $this->context->currency->iso_code . " " . $this->context->currency->sign . $instalment;
+        return $this->context->currency->iso_code . " " . $this->context->currency->sign . number_format($instalment, 2, '.', ',');
     }
 
 
@@ -565,7 +565,7 @@ class Afterpay extends PaymentModule
 
             //get the cart total since this would be Full Refund
             $cart = new Cart($order->id_cart);
-            $order_total = round($cart->getOrderTotal(), 2);
+            $order_total = round($cart->getOrderTotal(), 2, PHP_ROUND_HALF_UP);
 
             $payments = $order->getOrderPayments();
             $afterpay_transaction_id = $payments[0]->transaction_id;
@@ -573,7 +573,7 @@ class Afterpay extends PaymentModule
             $currency = new CurrencyCore($order->id_currency);
             $currency_code = $currency->iso_code;
 
-            $results = $afterpay_refund->doRefund($afterpay_transaction_id, $order_total, $currency_code);
+            $results = $afterpay_refund->doRefund($afterpay_transaction_id, number_format($order_total, 2, '.', ''), $currency_code);
             $this->_verifyRefund( $results );
             
         }
@@ -607,9 +607,9 @@ class Afterpay extends PaymentModule
             $refund_total_amount    +=  $item["amount"];
         }
 
-        $refund_total_amount = round($refund_total_amount, 2);
+        $refund_total_amount = round($refund_total_amount, 2, PHP_ROUND_HALF_UP);
 
-        $results = $afterpay_refund->doRefund($afterpay_transaction_id, round($refund_total_amount, 2), $currency_code);
+        $results = $afterpay_refund->doRefund($afterpay_transaction_id, number_format($refund_total_amount, 2, '.', ''), $currency_code);
 
         if( !empty($results->errorCode) ) {
 

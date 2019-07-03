@@ -2,7 +2,7 @@
 <module>
     <name>afterpay</name>
     <displayName><![CDATA[Afterpay Payment Gateway]]></displayName>
-    <version><![CDATA[1.0.0]]></version>
+    <version><![CDATA[1.0.1]]></version>
     <description><![CDATA[This is a payment gateway module for Afterpay]]></description>
     <author><![CDATA[Afterpay Touch Group]]></author>
     <tab><![CDATA[payments_gateways]]></tab>

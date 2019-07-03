@@ -77,6 +77,9 @@ class AfterpayValidationModuleFrontController extends ModuleFrontController
                                     $_REQUEST["user_agent"]
                                 );
 
+        $afterpay_checkout->setRedirectConfirmUrl( $this->context->link->getModuleLink( $this->module->name, 'return' ) );
+        $afterpay_checkout->setRedirectCancelUrl( $this->context->link->getPageLink( 'order', null, null, 'step=4' ) );
+
         // $afterpay_checkout->processItems();
         // $afterpay_checkout->processShippingAddress();
         // $afterpay_checkout->processBillingAddress();
