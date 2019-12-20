@@ -45,12 +45,14 @@ class Afterpay extends PaymentModule
     protected $_html = '';
     protected $_postErrors = array();
 
-    public $afterpay_merchant_id;
-    public $afterpay_merchant_key;
-    public $afterpay_api_environment;
-    public $afterpay_enabled;
-    public $afterpay_payment_min;
-    public $afterpay_payment_max;
+    protected $afterpay_enabled;
+    protected $afterpay_merchant_id;
+    protected $afterpay_merchant_key;
+    protected $afterpay_api_environment;
+    protected $afterpay_payment_min;
+    protected $afterpay_payment_max;
+    protected $afterpay_restricted_categories;
+    protected $afterpay_user_agent;
 
     /**
      * Constructor function
@@ -61,7 +63,7 @@ class Afterpay extends PaymentModule
     {
         $this->name = 'afterpay';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.1';
+        $this->version = '1.0.2';
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
         $this->author = 'Afterpay Touch Group';
         $this->controllers = array('validation', 'return');
@@ -82,7 +84,7 @@ class Afterpay extends PaymentModule
             $this->warning = $this->l('No currency has been set for this module.');
         }
     }
-    
+
     /**
      * Install function
      * Set up the Module Hooks
@@ -90,22 +92,22 @@ class Afterpay extends PaymentModule
      */
     public function install() {
 
-        if  (!parent::install() || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn') 
-                || !$this->registerHook('actionOrderStatusUpdate') 
-                || !$this->registerHook('actionProductCancel') 
-                || !$this->registerHook('actionOrderSlipAdd') 
-                || !$this->registerHook('displayProductPriceBlock') 
-                || !$this->registerHook('displayProductAdditionalInfo') 
+        if  (!parent::install() || !$this->registerHook('paymentOptions') || !$this->registerHook('paymentReturn')
+                || !$this->registerHook('actionOrderStatusUpdate')
+                || !$this->registerHook('actionProductCancel')
+                || !$this->registerHook('actionOrderSlipAdd')
+                || !$this->registerHook('displayProductPriceBlock')
+                || !$this->registerHook('displayProductAdditionalInfo')
                 || !$this->registerHook('displayHeader')
-                || !$this->registerHook('displayExpressCheckout') 
-                || !$this->registerHook('displayShoppingCartFooter') 
-                || !$this->registerHook('displayAdminOrder') 
+                || !$this->registerHook('displayExpressCheckout')
+                || !$this->registerHook('displayShoppingCartFooter')
+                || !$this->registerHook('displayAdminOrder')
             ) {
             return false;
         }
         return true;
     }
-    
+
     /**
      * Main Hook for Payment Module
      * Set up the Module Hooks
@@ -114,20 +116,13 @@ class Afterpay extends PaymentModule
      * since 1.0.0
      */
     public function hookPaymentOptions($params) {
-        if (!$this->afterpay_enabled) {
-            return;
-        }
-
-        if (!$this->checkCurrency($params['cart'])) {
-            return;
-        }
 
         $total = $this->context->cart->getOrderTotal();
-        $payment_limits = $this->_getFrontEndLimits();
 
-        if( $payment_limits["afterpay_payment_min"] > $total ||  
-            $payment_limits["afterpay_payment_max"] < $total) {
-            
+        if ( !$this->_isPriceWithinLimits($total) ||
+            !$this->checkCurrency($params['cart']) ||
+            $this->_isCartRestricted($params['cart']) )
+        {
             return;
         }
 
@@ -140,7 +135,7 @@ class Afterpay extends PaymentModule
 
         return $payment_options;
     }
-    
+
     /**
      * Main Function to output Afterpay in the checkout
      * Set up the Module Hooks
@@ -198,7 +193,7 @@ class Afterpay extends PaymentModule
 
         return $this->context->currency->iso_code . " " . $this->context->currency->sign . number_format($order_total, 2, '.', ',');
     }
-    
+
     /**
      * Display function for Payment Breakdowns
      *
@@ -215,7 +210,7 @@ class Afterpay extends PaymentModule
 
         return $this->context->currency->iso_code . " " . $this->context->currency->sign . number_format($instalment, 2, '.', ',');
     }
-    
+
     /**
      * Display function for Last Payment Breakdown
      *
@@ -274,9 +269,20 @@ class Afterpay extends PaymentModule
      */
     private function _init_configurations() {
 
-        $config = Configuration::getMultiple(array('AFTERPAY_ENABLED', 'AFTERPAY_MERCHANT_ID', 'AFTERPAY_MERCHANT_KEY', 'AFTERPAY_API_ENVIRONMENT', 'AFTERPAY_USER_AGENT'));
+        $config = Configuration::getMultiple(array(
+            'AFTERPAY_ENABLED',
+            'AFTERPAY_MERCHANT_ID',
+            'AFTERPAY_MERCHANT_KEY',
+            'AFTERPAY_API_ENVIRONMENT',
+            'AFTERPAY_PAYMENT_MIN',
+            'AFTERPAY_PAYMENT_MAX',
+            'AFTERPAY_RESTRICTED_CATEGORIES',
+            'AFTERPAY_USER_AGENT',
+        ));
+
+        $this->afterpay_enabled = false;
         if (!empty($config['AFTERPAY_ENABLED'])) {
-            $this->afterpay_enabled = $config['AFTERPAY_ENABLED'];
+            $this->afterpay_enabled = (bool)$config['AFTERPAY_ENABLED'];
         }
         if (!empty($config['AFTERPAY_MERCHANT_ID'])) {
             $this->afterpay_merchant_id = $config['AFTERPAY_MERCHANT_ID'];
@@ -288,10 +294,14 @@ class Afterpay extends PaymentModule
             $this->afterpay_api_environment = $config['AFTERPAY_API_ENVIRONMENT'];
         }
         if (!empty($config['AFTERPAY_PAYMENT_MIN'])) {
-            $this->afterpay_payment_min = $config['AFTERPAY_PAYMENT_MIN'];
+            $this->afterpay_payment_min = (float)$config['AFTERPAY_PAYMENT_MIN'];
         }
         if (!empty($config['AFTERPAY_PAYMENT_MAX'])) {
-            $this->afterpay_payment_max = $config['AFTERPAY_PAYMENT_MAX'];
+            $this->afterpay_payment_max = (float)$config['AFTERPAY_PAYMENT_MAX'];
+        }
+        $this->afterpay_restricted_categories = array();
+        if (!empty($config['AFTERPAY_RESTRICTED_CATEGORIES'])) {
+            $this->afterpay_restricted_categories = json_decode($config['AFTERPAY_RESTRICTED_CATEGORIES']);
         }
         if (!empty($config['AFTERPAY_USER_AGENT'])) {
             $this->afterpay_user_agent = $config['AFTERPAY_USER_AGENT'];
@@ -305,11 +315,11 @@ class Afterpay extends PaymentModule
     */
     public function getContent() {
         $output = null;
-     
+
         if (Tools::isSubmit('submit'.$this->name)) {
             $output = $this->_validate_configuration();
         }
-        
+
         return $output . $this->displayForm();
     }
 
@@ -325,6 +335,7 @@ class Afterpay extends PaymentModule
         $afterpay_merchant_key = strval(Tools::getValue('AFTERPAY_MERCHANT_KEY'));
         $afterpay_api_environment = strval(Tools::getValue('AFTERPAY_API_ENVIRONMENT'));
         $afterpay_enabled = strval(Tools::getValue('AFTERPAY_ENABLED'));
+        $afterpay_restricted_categories = Tools::getValue('AFTERPAY_RESTRICTED_CATEGORIES', array());
 
         $error = false;
 
@@ -335,7 +346,7 @@ class Afterpay extends PaymentModule
 
             $output .= $this->displayWarning($this->l('Afterpay is Disabled'));
         }
-        
+
         Configuration::updateValue('AFTERPAY_ENABLED', $afterpay_enabled);
 
         //validate Merchant ID
@@ -372,17 +383,19 @@ class Afterpay extends PaymentModule
             Configuration::updateValue('AFTERPAY_API_ENVIRONMENT', $afterpay_api_environment);
         }
 
+        Configuration::updateValue('AFTERPAY_RESTRICTED_CATEGORIES', json_encode($afterpay_restricted_categories));
+
         if( !empty($afterpay_merchant_id) && !empty($afterpay_merchant_key)  && !empty($afterpay_api_environment) ) {
 
             $user_agent       =   "AfterpayPrestaShop1.7Module " . $this->version . " - Merchant ID: " . $afterpay_merchant_id .
-                                " - URL: " . Tools::getHttpHost(true) . __PS_BASE_URI__; 
-            
+                                " - URL: " . Tools::getHttpHost(true) . __PS_BASE_URI__;
+
             Configuration::updateValue('AFTERPAY_USER_AGENT', $user_agent);
 
             $afterpay_admin         =   new AfterpayConfig(
-                                            $afterpay_merchant_id, 
-                                            $afterpay_merchant_key, 
-                                            $afterpay_api_environment, 
+                                            $afterpay_merchant_id,
+                                            $afterpay_merchant_key,
+                                            $afterpay_api_environment,
                                             $afterpay_enabled,
                                             $user_agent
                                         );
@@ -406,14 +419,6 @@ class Afterpay extends PaymentModule
     */
     public function displayForm() {
 
-        // Get default language
-        $afterpay_merchant_id       =   (int)Configuration::get('AFTERPAY_MERCHANT_ID');
-        $afterpay_merchant_key      =   Configuration::get('AFTERPAY_MERCHANT_KEY');
-        $afterpay_api_environment   =   (int)Configuration::get('AFTERPAY_API_ENVIRONMENT');
-        $afterpay_enabled           =   (int)Configuration::get('AFTERPAY_ENABLED');
-        $afterpay_payment_min       =   (int)Configuration::get('AFTERPAY_PAYMENT_MIN');
-        $afterpay_payment_max       =   (int)Configuration::get('AFTERPAY_PAYMENT_MAX');
-         
         // Init Fields form array
         $fields_form[0]['form'] = array(
             'legend'    => array(
@@ -487,6 +492,18 @@ class Afterpay extends PaymentModule
                     'name'      =>  'AFTERPAY_PAYMENT_MAX',
                     'size'      =>  128,
                     'readonly'  =>  'readonly'
+                ),
+                array(
+                    'type' => 'categories',
+                    'label' => $this->l('Restricted Categories'),
+                    'name' => 'AFTERPAY_RESTRICTED_CATEGORIES',
+                    'tree' => array(
+                        'id' => 'AFTERPAY_RESTRICTED_CATEGORIES',
+                        'selected_categories' => json_decode(Configuration::get('AFTERPAY_RESTRICTED_CATEGORIES')),
+                        'root_category' => Category::getRootCategory()->id,
+                        'use_search' => true,
+                        'use_checkbox' => true,
+                    ),
                 )
             ),
             'submit' => array(
@@ -494,16 +511,16 @@ class Afterpay extends PaymentModule
                 'class' => 'btn btn-default pull-right'
             )
         );
-         
+
         $helper = new HelperForm();
-         
+
         // Module, token and currentIndex
         $helper->module = $this;
         $helper->name_controller = $this->name;
         $helper->token = Tools::getAdminTokenLite('AdminModules');
         $helper->currentIndex = AdminController::$currentIndex.'&configure='.$this->name;
-         
-         
+
+
         // Title and toolbar
         $helper->title = $this->displayName;
         $helper->show_toolbar = true;        // false -> remove toolbar
@@ -521,7 +538,7 @@ class Afterpay extends PaymentModule
                 'desc' => $this->l('Back to list')
             )
         );
-         
+
         // Load current value
         $helper->fields_value['AFTERPAY_ENABLED']           =   Configuration::get('AFTERPAY_ENABLED');
         $helper->fields_value['AFTERPAY_MERCHANT_ID']       =   Configuration::get('AFTERPAY_MERCHANT_ID');
@@ -529,7 +546,7 @@ class Afterpay extends PaymentModule
         $helper->fields_value['AFTERPAY_API_ENVIRONMENT']   =   Configuration::get('AFTERPAY_API_ENVIRONMENT');
         $helper->fields_value['AFTERPAY_PAYMENT_MIN']       =   Configuration::get('AFTERPAY_PAYMENT_MIN');
         $helper->fields_value['AFTERPAY_PAYMENT_MAX']       =   Configuration::get('AFTERPAY_PAYMENT_MAX');
-         
+
         return $helper->generateForm($fields_form);
     }
     /*-----------------------------------------------------------------------------------------------------------------------
@@ -542,7 +559,7 @@ class Afterpay extends PaymentModule
     /*-----------------------------------------------------------------------------------------------------------------------
                                                     Start of Refund Codes
     -----------------------------------------------------------------------------------------------------------------------*/
-    
+
     /**
     * Hook Action for Order Status Update (handles Refunds)
     * @param array $params
@@ -560,7 +577,7 @@ class Afterpay extends PaymentModule
         }
 
         if( $new_order_status->id == _PS_OS_REFUND_ ) {
-            
+
             $afterpay_refund = $this->_constructRefundObject($order);
 
             //get the cart total since this would be Full Refund
@@ -575,11 +592,11 @@ class Afterpay extends PaymentModule
 
             $results = $afterpay_refund->doRefund($afterpay_transaction_id, number_format($order_total, 2, '.', ''), $currency_code);
             $this->_verifyRefund( $results );
-            
+
         }
         return false;
     }
-    
+
     /**
     * Hook Action for Partial Refunds
     * @param array $params
@@ -597,7 +614,7 @@ class Afterpay extends PaymentModule
             $currency_code = $currency->iso_code;
         }
 
-        
+
         $afterpay_refund = $this->_constructRefundObject($order);
 
         $refund_products_list   =   $params["productList"];
@@ -625,19 +642,13 @@ class Afterpay extends PaymentModule
     * since 1.0.0
     */
     private function _constructRefundObject($order) {
-        $config = Configuration::getMultiple(array('AFTERPAY_MERCHANT_ID', 'AFTERPAY_MERCHANT_KEY', 'AFTERPAY_API_ENVIRONMENT'));
-        
-        $afterpay_merchant_id       =   (int)Configuration::get('AFTERPAY_MERCHANT_ID');
-        $afterpay_merchant_key      =   Configuration::get('AFTERPAY_MERCHANT_KEY');
-        $afterpay_api_environment   =   Configuration::get('AFTERPAY_API_ENVIRONMENT');
-        $afterpay_user_agent        =   Configuration::get('AFTERPAY_USER_AGENT');
 
-        $afterpay_refund    =   new AfterpayRefund(
-                                    $afterpay_merchant_id, 
-                                    $afterpay_merchant_key, 
-                                    $afterpay_api_environment,
-                                    $afterpay_user_agent
-                                );
+        $afterpay_refund = new AfterpayRefund(
+            (int)$this->afterpay_merchant_id,
+            $this->afterpay_merchant_key,
+            $this->afterpay_api_environment,
+            $this->afterpay_user_agent
+        );
 
         return $afterpay_refund;
     }
@@ -694,14 +705,12 @@ class Afterpay extends PaymentModule
     public function hookDisplayProductPriceBlock($params) {
 
         $current_controller = Tools::getValue('controller');
-        $payment_limits = $this->_getFrontEndLimits();
 
-        if( $current_controller == "product" && 
-            $params["type"] == "after_price" &&  
-            $payment_limits["afterpay_payment_min"] <= $params["product"]["price_amount"] &&  
-            $payment_limits["afterpay_payment_max"] >= $params["product"]["price_amount"] &&  
-            $payment_limits["afterpay_enabled"] ) {
-            
+        if ( $current_controller == "product" &&
+            $params["type"] == "after_price" &&
+            $this->_isPriceWithinLimits($params["product"]["price_amount"]) &&
+            !$this->_isProductRestricted($params['product']->getID()) )
+        {
             $this->context->smarty->assign( "afterpay_instalment_breakdown", $this->_getCurrentInstalmentsDisplay( $params["product"]["price_amount"] ) );
             return $this->context->smarty->fetch("module:afterpay/views/templates/front/product_page.tpl");
         }
@@ -716,13 +725,10 @@ class Afterpay extends PaymentModule
     public function hookDisplayProductAdditionalInfo($params) {
 
         $current_controller = Tools::getValue('controller');
-        $payment_limits = $this->_getFrontEndLimits();
 
-        if( $current_controller == "product"  && 
-            $payment_limits["afterpay_payment_min"] <= $params["product"]["price_amount"] &&  
-            $payment_limits["afterpay_payment_max"] >= $params["product"]["price_amount"] &&  
-            $payment_limits["afterpay_enabled"] ) {
-
+        if ( $current_controller == "product" &&
+            $this->_isPriceWithinLimits($params["product"]["price_amount"]) )
+        {
             $this->context->controller->addJS("https://code.jquery.com/jquery-1.12.4.js");
             return $this->context->smarty->fetch("module:afterpay/views/templates/front/product_modal.tpl");
         }
@@ -738,7 +744,7 @@ class Afterpay extends PaymentModule
         $this->context->controller->addCSS($this->_path."css/afterpay.css", "all");
         $this->context->controller->addJS($this->_path."js/afterpay.js");
 
-        $this->context->smarty->assign( "afterpay_base_url", Context::getContext()->shop->getBaseURL(true) );    
+        $this->context->smarty->assign( "afterpay_base_url", Context::getContext()->shop->getBaseURL(true) );
     }
 
     /*-----------------------------------------------------------------------------------------------------------------------
@@ -760,12 +766,10 @@ class Afterpay extends PaymentModule
     public function hookDisplayExpressCheckout($params) {
 
         $total = $this->context->cart->getOrderTotal();
-        $payment_limits = $this->_getFrontEndLimits();
 
-        if( $payment_limits["afterpay_payment_min"] <= $total &&  
-            $payment_limits["afterpay_payment_max"] >= $total &&  
-            $payment_limits["afterpay_enabled"] ) {
-    
+        if ( $this->_isPriceWithinLimits($total) &&
+            !$this->_isCartRestricted($params['cart']) )
+        {
             return $this->context->smarty->fetch("module:afterpay/views/templates/front/cart_page.tpl");
         }
     }
@@ -777,14 +781,11 @@ class Afterpay extends PaymentModule
     * since 1.0.0
     */
     public function hookDisplayShoppingCartFooter($params) {
+
         $total = $this->context->cart->getOrderTotal();
 
-        $payment_limits = $this->_getFrontEndLimits();
-
-        if( $payment_limits["afterpay_payment_min"] <= $total &&  
-            $payment_limits["afterpay_payment_max"] >= $total &&  
-            $payment_limits["afterpay_enabled"] ) {
-            
+        if ( $this->_isPriceWithinLimits($total) )
+        {
             return $this->context->smarty->fetch("module:afterpay/views/templates/front/product_modal.tpl");
         }
     }
@@ -793,24 +794,30 @@ class Afterpay extends PaymentModule
                                                 End of Afterpay Cart Display
     -----------------------------------------------------------------------------------------------------------------------*/
 
-    
+
     /*-----------------------------------------------------------------------------------------------------------------------
                                                     Miscellaneous
     -----------------------------------------------------------------------------------------------------------------------*/
-    
-    /**
-    * Function to get the Afterpay Front-End criteria 
-    * @return array
-    * since 1.0.0
-    */
-    private function _getFrontEndLimits() {
 
-        $return["afterpay_enabled"]     =   (int)Configuration::get('AFTERPAY_ENABLED');
-        $return["afterpay_payment_min"] =   (int)Configuration::get('AFTERPAY_PAYMENT_MIN');
-        $return["afterpay_payment_max"] =   (int)Configuration::get('AFTERPAY_PAYMENT_MAX');
+    private function _isPriceWithinLimits(float $price) {
+        return $this->afterpay_enabled &&
+            $price >= $this->afterpay_payment_min &&
+            $price <= $this->afterpay_payment_max;
+    }
 
-        return $return;
-    } 
+    private function _isProductRestricted($product_id) {
+        $product_cats = Product::getProductCategories($product_id);
+        return (bool) count(array_intersect($product_cats, $this->afterpay_restricted_categories));
+    }
+
+    private function _isCartRestricted($cart) {
+        foreach ($cart->getProducts() as $product) {
+            if ($this->_isProductRestricted($product['id_product'])) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
     * Function to check the Supported Currency

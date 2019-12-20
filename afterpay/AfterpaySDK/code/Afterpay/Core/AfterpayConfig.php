@@ -71,7 +71,7 @@ class AfterpayConfig
             {
                 echo "Please check if config.ini exists and all values are set properly. Please make sure mode should be either sandbox or production";
                 exit;
-            }  
+            }
 
             $this->setEnvironment($ini_array['Service']['mode']);
         }
@@ -132,7 +132,7 @@ class AfterpayConfig
         if(!array_key_exists("Account",$ini_array))
         {
             return false;
-        } 
+        }
         //Check if Merchant Id is blank
         if($ini_array['Account']['MerchantId'] == '')
         {
@@ -161,28 +161,36 @@ class AfterpayConfig
     }
 
     /**
-    * 
+    *
     */
     protected function setEnvironment($mode)
-    {   
+    {
+        $currency = \CurrencyCore::getDefaultCurrency();
+        if (!$currency) {
+            throw new AfterpayConfigurationException( "Default currency has not been set." );
+        }
+        $code = $currency->iso_code;
+
         //Set Merchant Id, Secret Key and Callback Url
         if($mode == 'sandbox')
         {
-            $this->setConfigUrl('https://api-sandbox.afterpay.com/v1/configuration');
-            $this->setOrderUrl('https://api-sandbox.afterpay.com/v1/orders');
-            $this->setCheckoutUrl('https://portal-sandbox.afterpay.com/checkout?token=');
-            $this->setPaymentUrl('https://api-sandbox.afterpay.com/v1/payments/capture');
-            $this->setRefundUrl('https://api-sandbox.afterpay.com/v1/payments');
+            $sub_domain = ($code=='USD')?'api.us-sandbox':'api-sandbox';
 
+            $this->setConfigUrl('https://'.$sub_domain.'.afterpay.com/v1/configuration');
+            $this->setOrderUrl('https://'.$sub_domain.'.afterpay.com/v1/orders');
+            $this->setCheckoutUrl('https://portal-sandbox.afterpay.com/checkout?token=');
+            $this->setPaymentUrl('https://'.$sub_domain.'.afterpay.com/v1/payments/capture');
+            $this->setRefundUrl('https://'.$sub_domain.'.afterpay.com/v1/payments');
         }
         else if($mode == 'production')
         {
-            $this->setConfigUrl('https://api.afterpay.com/v1/configuration');
-            $this->setOrderUrl('https://api.afterpay.com/v1/orders');
-            $this->setCheckoutUrl('https://portal.afterpay.com/checkout?token=');
-            $this->setPaymentUrl('https://api.afterpay.com/v1/payments/capture');
-            $this->setRefundUrl('https://api.afterpay.com/v1/payments');
+            $sub_domain = ($code=='USD')?'api.us':'api';
 
+            $this->setConfigUrl('https://'.$sub_domain.'.afterpay.com/v1/configuration');
+            $this->setOrderUrl('https://'.$sub_domain.'.afterpay.com/v1/orders');
+            $this->setCheckoutUrl('https://portal.afterpay.com/checkout?token=');
+            $this->setPaymentUrl('https://'.$sub_domain.'.afterpay.com/v1/payments/capture');
+            $this->setRefundUrl('https://'.$sub_domain.'.afterpay.com/v1/payments');
         }
 
         return $this;
@@ -192,7 +200,7 @@ class AfterpayConfig
     * Name of the SDK
     *
     * @param string $sdkName
-    * 
+    *
     * @return $this
     */
     protected function setSDKName($sdkName)
@@ -200,7 +208,7 @@ class AfterpayConfig
         $this->sdkName = $sdkName;
         return $this;
     }
-     
+
     /**
     * Name of the SDK
     *
@@ -214,14 +222,14 @@ class AfterpayConfig
     * Version of the SDK
     *
     * @param string $sdkName
-    * 
+    *
     * @return $this
     */
     protected function setSDKVersion($sdkVersion)
     {
         $this->sdkVersion = $sdkVersion;
         return $this;
-    }    
+    }
     /**
     * Version of the SDK
     *
@@ -235,14 +243,14 @@ class AfterpayConfig
     * Merchant Id (Sandbox or Production)
     *
     * @param string $merchantId
-    * 
+    *
     * @return $this
     */
     protected function setMerchantId($merchantId)
     {
         $this->merchantId = $merchantId;
         return $this;
-    }    
+    }
     /**
     * Merchant Id
     *
@@ -256,14 +264,14 @@ class AfterpayConfig
     * Merchant Secret Key (Sandbox or Production)
     *
     * @param string $merchantKey
-    * 
+    *
     * @return $this
     */
     protected function setMerchantSecret($merchantSecret)
     {
         $this->merchantSecret = $merchantSecret;
         return $this;
-    }    
+    }
     /**
     * Merchant Secret Key
     *
@@ -277,14 +285,14 @@ class AfterpayConfig
     * Config URL (Sandbox or Production)
     *
     * @param string $configUrl
-    * 
+    *
     * @return $this
     */
     protected function setConfigUrl($configUrl)
     {
         $this->configUrl = $configUrl;
         return $this;
-    }    
+    }
     /**
     * Config URL
     *
@@ -298,14 +306,14 @@ class AfterpayConfig
     * Order URL (Sandbox or Production)
     *
     * @param string $orderUrl
-    * 
+    *
     * @return $this
     */
     protected function setOrderUrl($orderUrl)
     {
         $this->orderUrl = $orderUrl;
         return $this;
-    }    
+    }
     /**
     * API Mode
     *
@@ -330,14 +338,14 @@ class AfterpayConfig
     * Checkout URL (Sandbox or Production)
     *
     * @param string $checkoutUrl
-    * 
+    *
     * @return $this
     */
     protected function setCheckoutUrl($checkoutUrl)
     {
         $this->checkoutUrl = $checkoutUrl;
         return $this;
-    }    
+    }
     /**
     * Checkout URL
     *
@@ -351,14 +359,14 @@ class AfterpayConfig
     * Payment URL (Sandbox or Production)
     *
     * @param string $paymentUrl
-    * 
+    *
     * @return $this
     */
     protected function setPaymentUrl($paymentUrl)
     {
         $this->paymentUrl = $paymentUrl;
         return $this;
-    }    
+    }
     /**
     * Payment URL
     *
@@ -372,14 +380,14 @@ class AfterpayConfig
     * Refund URL (Sandbox or Production)
     *
     * @param string $refundUrl
-    * 
+    *
     * @return $this
     */
     protected function setRefundUrl($refundUrl)
     {
         $this->refundUrl = $refundUrl;
         return $this;
-    }    
+    }
     /**
     * Refund URL
     *
@@ -389,7 +397,7 @@ class AfterpayConfig
     {
         return $this->refundUrl;
     }
-   
+
     /**
     * API Mode
     *

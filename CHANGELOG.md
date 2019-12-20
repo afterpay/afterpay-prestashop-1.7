@@ -1,5 +1,28 @@
 # Afterpay PrestaShop Module Changelog
 
+## Version 1.0.2
+
+_Fri 20 Dec 2019 (AEDT)_
+
+### Supported Editions and Versions:
+
+- PrestaShop 1.7.2.2 and later
+- Afterpay PrestaShop 1.7 Module version 1.0.2 has been verified against a new instance of:
+  * PrestaShop 1.7.6.1 (AU)
+  * PrestaShop 1.7.6.1 (NZ)
+
+### Supported Markets:
+
+- Australia (AUD currency)
+- New Zealand (NZD currency)
+
+### Highlights
+
+- Allow admin to disable Afterpay for a subset of product categories.
+- Presentation improvements for orders displayed in the Afterpay portals.
+
+---
+
 ## Release Name: Version 1.0.1
 
 _03 Jul 2019_

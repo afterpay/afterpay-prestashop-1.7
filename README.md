@@ -4,35 +4,29 @@
 </p>
 
 <ol>
-	<li> 
-		Website Currency must be set to 'Australian Dollar'
+	<li>
+		Website Currency must be set to either 'Australian Dollar' or 'New Zealand Dollar'
 		<ol>
 			<li>PrestaShop Back Office > International > Localization</li>
 		</ol>
 	</li>
-	<li> 
-		Website Default Country must be set to ‘Australia’
+	<li>
+		Website Default Country must be set to either 'Australia' or 'New Zealand'
 		<ol>
 			<li>PrestaShop Back Office > International > Localization</li>
 		</ol>
 	</li>
-	<li> 
+	<li>
 		'Zip/Postal Code' must be set to 'Yes'
 		<ol>
-			<li>PrestaShop Back Office > International > Locations > Select 'Australia'</li>
+			<li>PrestaShop Back Office > International > Locations > Countries > Edit 'Australia' or 'New Zealand'</li>
 		</ol>
 	</li>
-	<li> 
-		'Contains States' must be set to 'Yes'
-		<ol>
-			<li>PrestaShop Back Office > International > Locations > Select 'Australia'</li>
-		</ol>
-	</li>
-	<li> 
+	<li>
 		'Address' required fields must include the below values:
 		<ol>
 			<li>Firstname, lastname, email, address1, postcode, city, phone</li>
-			<li>PrestaShop Back Office > International > Locations > Select 'Australia'</li>
+			<li>PrestaShop Back Office > International > Locations > Countries > Edit 'Australia' or 'New Zealand'</li>
 		</ol>
 	</li>
 </ol>
@@ -56,7 +50,7 @@
 <p> <em>Prerequisite for this section is to obtain an Afterpay Merchant ID and Merchant Key from Afterpay.</em> </p>
 
 <ol>
-	<li> 
+	<li>
 		Upon completion of the installation, you will be redirected to the Afterpay module configuration screen, alternatively:
 		<ul>
 			<li>Navigate to: <em>PrestaShop Back Office > Modules > Modules & Services > Installed Modules</em>.</li>
@@ -66,7 +60,7 @@
 	<li> Enable the Afterpay module by setting 'Enabled' to 'Yes'. </li>
 	<li> Enter 'Merchant ID'. </li>
 	<li> Enter 'Merchant Key'. </li>
-	<li> 
+	<li>
 		Select applicable 'API Environment'.
 		<ul>
 			<li>'Sandbox' API Environment for performing test transactions on a staging website.</li>
@@ -78,7 +72,7 @@
 </ol>
 
 <h2> 1.4 Upgrade of Afterpay Module </h2>
-<p> 
+<p>
 	This section outlines the steps to upgrade the currently installed Afterpay module. The process involves the complete removal of the currently installed module, followed by the installation of the new module.
 </p>
 
@@ -97,7 +91,7 @@
 	<li> Enable the Afterpay module by setting 'Enabled' to 'Yes'. </li>
 	<li> Enter 'Merchant ID'. </li>
 	<li> Enter 'Merchant Key'. </li>
-	<li> 
+	<li>
 		Select applicable 'API Environment'.
 		<ul>
 			<li>'Sandbox' API Environment for performing test transactions on a staging website.</li>

@@ -77,10 +77,10 @@ class AfterpayCheckout
     /**
     * Constructor Function
     *
-    * @param string $merchant_id 
-    * @param string $merchant_secret 
-    * @param string $mode 
-    * @param Cart $cart_object 
+    * @param string $merchant_id
+    * @param string $merchant_secret
+    * @param string $mode
+    * @param Cart $cart_object
     * @param string $currency_code
     * since 1.0.0
     */
@@ -169,12 +169,12 @@ class AfterpayCheckout
     */
     private function _constructPayload() {
 
-        $this->transaction->setTotalAmount( $this->_processTotal( $this->currency_code ) ); 
+        $this->transaction->setTotalAmount( $this->_processTotal( $this->currency_code ) );
 
-        $this->transaction->setMerchantUrl( $this->_processRedirect() ); 
+        $this->transaction->setMerchantUrl( $this->_processRedirect() );
 
-        $this->transaction->setConsumer( $this->_processCustomer() ); 
-        
+        $this->transaction->setConsumer( $this->_processCustomer() );
+
         // $this->transaction->setMerchantReference( $this->cart_object->id );
 
         $this->transaction->setBilling( $this->_processBillingAddress() );
@@ -242,7 +242,7 @@ class AfterpayCheckout
 
         return $items;
     }
-    
+
     /**
     * Process the Order Shipping Address
     *
@@ -267,13 +267,10 @@ class AfterpayCheckout
         if( !empty($shipping_address->id_state) && !empty($state_object) ) {
             $address['state']   =   $state_object->iso_code;
         }
-        else {
-            $address['state']   =   $shipping_address->city;
-        }
 
         return $address;
     }
-    
+
     /**
     * Process the Order Billing Address
     *
@@ -299,13 +296,10 @@ class AfterpayCheckout
         if( !empty($billing_address->id_state) && !empty($state_object) ) {
             $address['state']   =   $state_object->iso_code;
         }
-        else {
-            $address['state']   =   $billing_address->city;
-        }
 
         return $address;
     }
-    
+
     /**
     * Process the Order Total Amount
     *
@@ -313,7 +307,7 @@ class AfterpayCheckout
     * since 1.0.0
     */
     private function _processTotal() {
-        $total_amount = new AfterpayAmount( number_format( round( $this->cart_object->getOrderTotal(), 2, PHP_ROUND_HALF_UP ), 2, '.', '' ), $this->currency_code ); 
+        $total_amount = new AfterpayAmount( number_format( round( $this->cart_object->getOrderTotal(), 2, PHP_ROUND_HALF_UP ), 2, '.', '' ), $this->currency_code );
         return $total_amount;
     }
 
@@ -339,7 +333,7 @@ class AfterpayCheckout
     * since 1.0.0
     */
     private function _processCustomer() {
-        //get Customer Data 
+        //get Customer Data
         $customer_id = $this->cart_object->id_customer;
         $customer = new Customer( (int) $customer_id );
 
@@ -363,7 +357,7 @@ class AfterpayCheckout
     * since 1.0.0
     */
     private function _processDiscount( $total_discounts ) {
-        //get Customer Data 
+        //get Customer Data
         $discount_amount = new AfterpayAmount( $total_discounts, $this->currency_code );
         $discount = new AfterpayDiscount('Discount Coupon', $discount_amount);
 
